@@ -1,6 +1,13 @@
 from PyPDF2 import PdfFileMerger
 
 
+def merge_pdfs(file_list, output_path):
+    merger = PdfFileMerger()
+    for pdf in file_list:
+        merger.append(pdf)
+    merger.write(output_path)
+
+
 def by_appending():
     merger = PdfFileMerger()
     f1 = open("testPDF1.pdf", "rb")
