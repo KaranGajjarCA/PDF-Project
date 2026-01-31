@@ -74,11 +74,11 @@
         </a>
         <br><br>
         {% if file_type == 'Merged PDF' %}
-        <a href="/convert_merged?filename={{ merged_filename }}" class="btn btn-warning">
+        <a href="/convert_merged?filename={{ merged_filename }}&temp_dir={{ temp_dir }}" class="btn btn-warning">
             <i class="fas fa-file-word"></i> Convert to Word
         </a>
         <br><br>
-        <a href="/compress_merged?filename={{ merged_filename }}" class="btn btn-info">
+        <a href="/compress_merged?filename={{ merged_filename }}&temp_dir={{ temp_dir }}" class="btn btn-info">
             <i class="fas fa-compress"></i> Compress PDF
         </a>
         <br><br>
