@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop PDF</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Cropper.js CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-top: 50px;
+            margin-bottom: 50px;
+            max-width: 800px;
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            background: #6f42c1;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        .file-input-wrapper:hover {
+            background: #5a359a;
+            transform: translateY(-2px);
+        }
+        .file-count {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .preview-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .crop-container {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #6f42c1, #5a359a);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(111,66,193,0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 20px;
+            margin: 5px;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner {
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-crop"></i> Crop PDF</h1>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="alert alert-danger" role="alert">
+            {{ messages[0] }}
+        </div>
+        {% endif %}
+        {% endwith %}
+        {% if not uploaded %}
+        <div class="upload-section">
+            <h2>Upload Your PDF</h2>
+            <form action="/crop" method="post" enctype="multipart/form-data">
+                <label for="pdf-upload" class="file-input-wrapper">
+                    <i class="fas fa-cloud-upload-alt"></i> Choose PDF Files
+                    <input type="file" id="pdf-upload" name="pdfs" multiple accept=".pdf" style="display: none;">
+                </label>
+                <div id="file-count" class="file-count">No files selected</div>
+                <br><br>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Upload & Preview
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <div class="preview-section">
+            <h2>Select Pages to Crop</h2>
+            <p class="text-muted">Click on a page thumbnail below to select and crop that specific page.</p>
+            <div class="thumbnails-grid" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 20px;">
+                {% for i in range(num_pages) %}
+                <div class="thumbnail-item" onclick="selectPage({{ i }})" style="cursor: pointer; border: 2px solid #ddd; border-radius: 5px; padding: 5px;">
+                    <img src="data:image/png;base64,{{ thumbnails[i] }}" alt="Page {{ i+1 }}" style="width: 100px; height: 100px;">
+                    <p style="text-align: center; margin: 5px 0; font-size: 12px;">Page {{ i+1 }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            <div id="crop-section" style="display: none;">
+                <h3>Crop Page <span id="current-page-num"></span></h3>
+                <p class="text-muted">Drag and resize the box on the preview to select the area you want to keep for this page.</p>
+                <div class="crop-container">
+                    <img id="preview-image" alt="PDF Preview">
+                </div>
+                <br>
+                <button type="button" onclick="cropCurrentPage()" class="btn btn-success" style="margin-right: 10px;">
+                    <i class="fas fa-check"></i> Crop This Page
+                </button>
+                <button type="button" onclick="closeCrop()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+            <form action="/crop" method="post">
+                <input type="hidden" name="all_crop_data" id="all_crop_data">
+                <input type="hidden" name="orig_width" value="{{ orig_width }}">
+                <input type="hidden" name="orig_height" value="{{ orig_height }}">
+                <input type="hidden" name="image_width" value="{{ image_width }}">
+                <input type="hidden" name="image_height" value="{{ image_height }}">
+                {% for fp in filepaths %}
+                <input type="hidden" name="filepaths" value="{{ fp }}">
+                {% endfor %}
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password (Optional)</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Leave blank for no password">
+                </div>
+                <button type="button" onclick="submitAllCrops()" class="btn btn-primary">
+                    <i class="fas fa-crop"></i> Apply Crops and Download
+                </button>
+                <a href="/crop" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back
+                </a>
+            </form>
+        </div>
+        {% endif %}
+        <div id="loading" class="loading-overlay d-none">
+            <div class="spinner">
+                <i class="fas fa-spinner fa-spin"></i> Processing...
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Cropper.js JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script>
+        {% if uploaded %}
+        let cropper = null;
+        let currentPage = -1;
+        let allCropData = [];
+
+        function selectPage(pageIndex) {
+            currentPage = pageIndex;
+            document.getElementById('current-page-num').textContent = pageIndex + 1;
+            document.getElementById('preview-image').src = '/preview/full_' + pageIndex + '.png';
+            document.querySelector('.thumbnails-grid').style.display = 'none';
+            document.getElementById('crop-section').style.display = 'block';
+            if (cropper) {
+                cropper.destroy();
+            }
+            cropper = new Cropper(document.getElementById('preview-image'), {
+                aspectRatio: NaN,
+                viewMode: 1,
+                responsive: true,
+                restore: false,
+                checkCrossOrigin: false,
+                checkOrientation: false,
+                modal: true,
+                guides: true,
+                center: true,
+                highlight: true,
+                background: true,
+                autoCrop: true,
+                autoCropArea: 0.8,
+                dragMode: 'move',
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+            });
+        }
+
+        function cropCurrentPage() {
+            if (cropper && currentPage !== -1) {
+                const cropData = cropper.getData();
+                cropData.page = currentPage;
+                // Remove existing crop for this page
+                allCropData = allCropData.filter(item => item.page !== currentPage);
+                allCropData.push(cropData);
+                closeCrop();
+                // Mark the thumbnail as cropped
+                const thumbnails = document.querySelectorAll('.thumbnail-item');
+                thumbnails[currentPage].style.borderColor = '#28a745';
+            }
+        }
+
+        function closeCrop() {
+            document.getElementById('crop-section').style.display = 'none';
+            document.querySelector('.thumbnails-grid').style.display = 'flex';
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            currentPage = -1;
+        }
+
+        function submitAllCrops() {
+            document.getElementById('all_crop_data').value = JSON.stringify(allCropData);
+            document.getElementById('loading').classList.remove('d-none');
+            document.querySelector('form').submit();
+        }
+        {% else %}
+        // Show file count
+        document.getElementById('pdf-upload').addEventListener('change', function() {
+            const count = this.files.length;
+            const fileCountDiv = document.getElementById('file-count');
+            if (count === 0) {
+                fileCountDiv.textContent = 'No files selected';
+            } else if (count === 1) {
+                fileCountDiv.textContent = '1 file selected';
+            } else {
+                fileCountDiv.textContent = count + ' files selected';
+            }
+        });
+        {% endif %}
+    </script>
+</body>
+</html>

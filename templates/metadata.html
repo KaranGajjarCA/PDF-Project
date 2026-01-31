@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit PDF Metadata</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-top: 50px;
+            margin-bottom: 50px;
+            max-width: 600px;
+        }
+        h1, h2 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .upload-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            background: linear-gradient(45deg, #20c997, #17a2b8);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        .file-input-wrapper:hover {
+            background: linear-gradient(45deg, #17a2b8, #138496);
+            transform: translateY(-2px);
+        }
+        .file-count {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .metadata-form {
+            margin-bottom: 30px;
+        }
+        .metadata-form .form-label {
+            font-weight: bold;
+        }
+        .btn-success {
+            background: linear-gradient(45deg, #20c997, #17a2b8);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(32,201,151,0.4);
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner {
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-edit"></i> Edit PDF Metadata</h1>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <div class="alert alert-danger" role="alert">
+            {{ messages[0] }}
+        </div>
+        {% endif %}
+        {% endwith %}
+        <div class="upload-section">
+            <h2>Upload Your PDF</h2>
+            <form action="/metadata" method="post" enctype="multipart/form-data">
+                <label for="pdf-upload" class="file-input-wrapper">
+                    <i class="fas fa-cloud-upload-alt"></i> Choose PDF File
+                    <input type="file" id="pdf-upload" name="pdf" accept=".pdf" style="display: none;">
+                </label>
+                <div id="file-count" class="file-count">No file selected</div>
+                <br><br>
+                
+                <div class="metadata-form">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="title" name="title" placeholder="Enter PDF title">
+                    </div>
+                    <div class="mb-3">
+                        <label for="author" class="form-label">Author</label>
+                        <input type="text" class="form-control" id="author" name="author" placeholder="Enter author name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="subject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="subject" name="subject" placeholder="Enter subject">
+                    </div>
+                    <div class="mb-3">
+                        <label for="creator" class="form-label">Creator</label>
+                        <input type="text" class="form-control" id="creator" name="creator" placeholder="Enter creator">
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password (Optional)</label>
+                        <input type="password" class="form-control" id="password" name="password" placeholder="Leave blank for no password">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save"></i> Update Metadata
+                </button>
+            </form>
+        </div>
+        <div id="loading" class="loading-overlay d-none">
+            <div class="spinner">
+                <i class="fas fa-spinner fa-spin"></i> Processing...
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Show file name
+        document.getElementById('pdf-upload').addEventListener('change', function() {
+            const file = this.files[0];
+            const fileCountDiv = document.getElementById('file-count');
+            if (file) {
+                fileCountDiv.textContent = 'File selected: ' + file.name;
+            } else {
+                fileCountDiv.textContent = 'No file selected';
+            }
+        });
+
+        // Show loading on submit
+        document.querySelector('form').addEventListener('submit', function() {
+            document.getElementById('loading').classList.remove('d-none');
+        });
+    </script>
+</body>
+</html>
